@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<script src="https://skyway.io/dist/v2/0.3/peer.js"></script>
+<title>SkyWay Sample</title>
+</head>
+<body>
+<video id="local"></video>
+<div id="remotes"></div>
+<span>API Key を入力してください：</span>
+<input type="text" id="apikey_input">
+<button type="button" name="apy_set" value="Set" id="api_set">Set</button>
+<div id="apikey"></div>
+<script>
+(function(){
+var SKYWAY_API_KEY = '';
+var REST_API_LIST = 'https://skyway.io/v2/active/list/';
+var peer = null;
+var selfid = null;
+var localStream = null;
+
+function initializePeer(callback) {
+  peer = new Peer({key: SKYWAY_API_KEY});
+  peer.on('open', function(id) {
+    console.log('initializePeer open');
+    selfid = id;
+    callback();
+  });
+
+  peer.on('call', function(mediaConnection) {
+    console.log('initializePeer call');
+    mediaConnection.answer(localStream);
+    settingMediaConnection(mediaConnection);
+  });
+
+  peer.on('close', function() {
+    console.log('initializePeer close');
+    peer.destroy();
+  });
+
+  peer.on('error', function(err) {
+    console.log('initializePeer error');
+    console.error(err);
+  });
+}
+
+function initializeMedia(callback) {
+  navigator.mediaDevices.getUserMedia(
+    {audio: true, video: true},
+    function(stream) {
+      localStream = stream;
+      var video = document.getElementById('local');
+      video.src = URL.createObjectURL(stream);
+      video.play();
+      callback();
+    },
+    function(error) {
+      console.error(error);
+    }
+  );
+}
+
+function callRemoteAll() {
+  var url = REST_API_LIST + SKYWAY_API_KEY;
+  var xhr = new XMLHttpRequest();
+  xhr.addEventListener('readystatechange', function() {
+    if (xhr.readyState != 4) {return;}
+    if (xhr.status != 200) {return;}
+    var remoteids = JSON.parse(xhr.responseText);
+    for (var i = 0; i < remoteids.length; i++) {
+      var remoteid = remoteids[i];
+      var mediaConnection = peer.call(remoteid, localStream);
+      settingMediaConnection(mediaConnection);
+    }
+  });
+  xhr.open('GET', url);
+  xhr.send();
+}
+
+function settingMediaConnection(mediaConnection) {
+  var remoteid = mediaConnection.peer;
+  var remoteStream = null;
+  var video = null;
+
+  mediaConnection.on('stream', function(stream) {
+    video = document.createElement('video');
+    video.src = URL.createObjectURL(stream);
+    video.play();
+    var parent = document.getElementById('remotes');
+    parent.appendChild(video);
+  });
+
+  mediaConnection.on('close', function() {
+    URL.revokeObjectURL(video.src);
+    video.parentNode.removeChild(video);
+  });
+
+  mediaConnection.on('error', function() {
+    console.error(err);
+  });
+}
+
+function showAPIKey() {
+  console.log(SKYWAY_API_KEY);
+  var apikey = document.getElementById('apikey');
+  apikey.innerHTML = SKYWAY_API_KEY;
+}
+
+function initialize() {
+  initializePeer(function() {
+    initializeMedia(function() {
+      callRemoteAll();
+    });
+  });
+}
+
+// window.addEventListener('load', initialize);
+
+var apiSet = document.getElementById('api_set');
+var apikeyInput = document.getElementById('apikey_input');
+apiSet.addEventListener('click', function(e) {
+  SKYWAY_API_KEY = apikeyInput.value;
+  apikeyInput.value = '';
+  showAPIKey();
+  initialize();
+})
+
+
+})();
+</script>
+</body>
+</html>
