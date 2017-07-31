@@ -8,9 +8,9 @@
 <body>
 <video id="local"></video>
 <div id="remotes"></div>
-<span>API Key を入力してください：</span>
+<span>Skyway API Key を入力してください：</span>
 <input type="text" id="apikey_input">
-<button type="button" name="apy_set" value="Set" id="api_set">Set</button>
+<button type="button" name="apy_set" value="Set" id="api_set">Connect</button>
 <div id="apikey"></div>
 <script>
 (function(){
@@ -68,6 +68,7 @@ function callRemoteAll() {
   xhr.addEventListener('readystatechange', function() {
     if (xhr.readyState != 4) {return;}
     if (xhr.status != 200) {return;}
+    console.log('call RemoteAll: '+ xhr.responseText);
     var remoteids = JSON.parse(xhr.responseText);
     for (var i = 0; i < remoteids.length; i++) {
       var remoteid = remoteids[i];
