@@ -4,21 +4,39 @@
 <meta charset="utf-8">
 <script src="https://skyway.io/dist/v2/0.3/peer.js"></script>
 <title>SkyWay Sample</title>
+<style>
+video {
+  width; 320px;
+  height: 240px;
+}
+</style>
 </head>
 <body>
-<video id="local"></video>
-<div id="remotes"></div>
-<span>Skyway API Key を入力してください：</span>
-<input type="text" id="apikey_input">
-<button type="button" name="apy_set" value="Set" id="api_set">Connect</button>
-<div id="apikey"></div>
+<p>
+  <div>My camera: 
+  <button type="button" name="apy_set" value="connect" id="api_set">Connect</button></div>
+  <video id="local"></video>
+</p>
+<p>
+  <div>Remote cameras: </div>
+  <div id="remotes"></div>
+</p>
 <script>
 (function(){
-var SKYWAY_API_KEY = '';
+var SKYWAY_API_KEY = '1dc9cfbf-56d1-4092-8002-87360f71ab26';
 var REST_API_LIST = 'https://skyway.io/v2/active/list/';
 var peer = null;
 var selfid = null;
 var localStream = null;
+
+navigator.mediaDevices = navigator.mediaDevices || ((navigator.mozGetUserMedia || navigator.webkitGetUserMedia) ? {
+   getUserMedia: function(c) {
+     return new Promise(function(y, n) {
+       (navigator.mozGetUserMedia ||
+        navigator.webkitGetUserMedia).call(navigator, c, y, n);
+     });
+   }
+} : null);
 
 function initializePeer(callback) {
   peer = new Peer({key: SKYWAY_API_KEY});
@@ -46,33 +64,45 @@ function initializePeer(callback) {
 }
 
 function initializeMedia(callback) {
-  navigator.mediaDevices.getUserMedia(
-    {audio: true, video: true},
-    function(stream) {
-      console.log('initializeMedia');
-      localStream = stream;
-      var video = document.getElementById('local');
-      video.src = URL.createObjectURL(stream);
+  console.log('initializeMedia callback:' + callback);
+
+  if (!navigator.mediaDevices) {
+    console.log("getUserMedia() not supported.");
+    return;
+  }
+
+  var constraints = { audio:true, video:true};
+  navigator.mediaDevices.getUserMedia(constraints)
+  .then(function(stream) {
+    localStream = stream;
+    var video = document.getElementById('local');
+    video.src = window.URL.createObjectURL(stream);
+    video.onloadedmetadata = function(e) {
       video.play();
+      
       callback();
-    },
-    function(error) {
-      console.error(error);
-    }
-  );
+    };
+  })
+  .catch(function(err) {
+    console.log(err.name + ": " + err.message); 
+  });
 }
 
 function callRemoteAll() {
+  console.log('call Remote All Start');
   var url = REST_API_LIST + SKYWAY_API_KEY;
   var xhr = new XMLHttpRequest();
   xhr.addEventListener('readystatechange', function() {
+    console.log('call RemoteAll ready state change');
     if (xhr.readyState != 4) {return;}
     if (xhr.status != 200) {return;}
     console.log('call RemoteAll: '+ xhr.responseText);
     var remoteids = JSON.parse(xhr.responseText);
+    console.log(remoteids);
     for (var i = 0; i < remoteids.length; i++) {
       var remoteid = remoteids[i];
       var mediaConnection = peer.call(remoteid, localStream);
+      console.log('mediaConnection: ' + mediaConnection);
       settingMediaConnection(mediaConnection);
     }
   });
@@ -83,14 +113,14 @@ function callRemoteAll() {
 function settingMediaConnection(mediaConnection) {
   var remoteid = mediaConnection.peer;
   var remoteStream = null;
-  var video = null;
+  var remoteVideo = null;
 
   mediaConnection.on('stream', function(stream) {
-    video = document.createElement('video');
-    video.src = URL.createObjectURL(stream);
-    video.play();
+    remoteVideo = document.createElement('video');
+    remoteVideo.src = URL.createObjectURL(stream);
+    remoteVideo.play();
     var parent = document.getElementById('remotes');
-    parent.appendChild(video);
+    parent.appendChild(remoteVideo);
   });
 
   mediaConnection.on('close', function() {
@@ -122,10 +152,21 @@ function initialize() {
 var apiSet = document.getElementById('api_set');
 var apikeyInput = document.getElementById('apikey_input');
 apiSet.addEventListener('click', function(e) {
-  SKYWAY_API_KEY = apikeyInput.value;
-  apikeyInput.value = '';
-  showAPIKey();
-  initialize();
+  if(apiSet.value == 'connect') {
+    // showAPIKey();
+    apiSet.value = 'disconnect';
+    apiSet.innerHTML = 'Disconnect';
+    initialize();
+  } else {
+    apiSet.value = 'connect';
+    apiSet.innerHTML = 'Connect';
+    var video = document.getElementById('local');
+    video.src = null;
+    var remotes = document.getElementById('remotes');
+    remotes = null;
+    peer.disconnect();
+    peer.destroy();
+  }
 })
 
 
