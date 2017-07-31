@@ -163,7 +163,7 @@ apiSet.addEventListener('click', function(e) {
     var video = document.getElementById('local');
     video.src = null;
     var remotes = document.getElementById('remotes');
-    remotes = null;
+    remotes.innerHTML = '';
     peer.disconnect();
     peer.destroy();
   }
