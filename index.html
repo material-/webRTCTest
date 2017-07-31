@@ -49,6 +49,7 @@ function initializeMedia(callback) {
   navigator.mediaDevices.getUserMedia(
     {audio: true, video: true},
     function(stream) {
+      console.log('initializeMedia');
       localStream = stream;
       var video = document.getElementById('local');
       video.src = URL.createObjectURL(stream);
