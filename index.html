@@ -147,11 +147,11 @@ function initialize() {
   });
 }
 
-// window.addEventListener('load', initialize);
-
 var apiSet = document.getElementById('api_set');
 var apikeyInput = document.getElementById('apikey_input');
-apiSet.addEventListener('click', function(e) {
+// apiSet.addEventListener('click', init);
+
+function init() {
   if(apiSet.value == 'connect') {
     // showAPIKey();
     apiSet.value = 'disconnect';
@@ -167,8 +167,9 @@ apiSet.addEventListener('click', function(e) {
     peer.disconnect();
     peer.destroy();
   }
-})
+}
 
+window.addEventListener('load', init);
 
 })();
 </script>
